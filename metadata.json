@@ -1,0 +1,6 @@
+{
+  "name": "Meridian — Personal Intelligence & Future Prediction Platform",
+  "description": "AI-powered personal intelligence, career guidance, longitudinal validation, and multi-category future prediction platform powered by modular Qwen3-8B reasoning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

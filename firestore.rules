@@ -1,0 +1,374 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBoundedString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isBoundedStringList(arr, maxItems) {
+      return arr is list && arr.size() <= maxItems && (arr.size() == 0 || arr[0] is string);
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidUserAccount(data, userId) {
+      return data.keys().hasAll([
+          'uid', 'email', 'displayName', 'parentalConsentAccepted', 'preferredModel', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'parentalConsentAccepted', 'preferredModel', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && isBoundedString(data.email, 3, 254)
+        && isBoundedString(data.displayName, 1, 120)
+        && data.parentalConsentAccepted is bool
+        && data.preferredModel in ['Qwen/Qwen3-8B', 'Qwen/Qwen3.8-2.4T-A95B', 'gemini-4-hydrogen']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProfileBasic(b) {
+      return b is map
+        && b.keys().hasAll(['name', 'age', 'gender', 'country', 'city', 'languages'])
+        && b.keys().hasOnly(['name', 'age', 'gender', 'country', 'city', 'languages'])
+        && isBoundedString(b.name, 1, 120)
+        && (b.age == null || (b.age is number && b.age >= 3 && b.age <= 120))
+        && isBoundedString(b.gender, 0, 60)
+        && isBoundedString(b.country, 0, 120)
+        && isBoundedString(b.city, 0, 120)
+        && isBoundedStringList(b.languages, 15);
+    }
+
+    function isValidProfileEducation(e) {
+      return e is map
+        && e.keys().hasAll([
+          'currentLevel', 'institution', 'overallGrade', 'subjectGrades',
+          'favoriteSubjects', 'weakSubjects', 'exceptionalSubjects', 'achievements'
+        ])
+        && e.keys().hasOnly([
+          'currentLevel', 'institution', 'overallGrade', 'subjectGrades',
+          'favoriteSubjects', 'weakSubjects', 'exceptionalSubjects', 'achievements'
+        ])
+        && isBoundedString(e.currentLevel, 0, 120)
+        && isBoundedString(e.institution, 0, 200)
+        && isBoundedString(e.overallGrade, 0, 80)
+        && e.subjectGrades is list && e.subjectGrades.size() <= 25
+        && isBoundedStringList(e.favoriteSubjects, 20)
+        && isBoundedStringList(e.weakSubjects, 20)
+        && isBoundedStringList(e.exceptionalSubjects, 20)
+        && isBoundedStringList(e.achievements, 20);
+    }
+
+    function isValidProfileInterests(i) {
+      return i is map
+        && i.keys().hasAll([
+          'hobbies', 'interests', 'favoriteActivities', 'sports',
+          'technicalInterests', 'creativeInterests', 'socialActivities', 'goalsAmbitions'
+        ])
+        && i.keys().hasOnly([
+          'hobbies', 'interests', 'favoriteActivities', 'sports',
+          'technicalInterests', 'creativeInterests', 'socialActivities', 'goalsAmbitions'
+        ])
+        && isBoundedStringList(i.hobbies, 20)
+        && isBoundedStringList(i.interests, 20)
+        && isBoundedStringList(i.favoriteActivities, 20)
+        && isBoundedStringList(i.sports, 20)
+        && isBoundedStringList(i.technicalInterests, 20)
+        && isBoundedStringList(i.creativeInterests, 20)
+        && isBoundedStringList(i.socialActivities, 20)
+        && isBoundedString(i.goalsAmbitions, 0, 2000);
+    }
+
+    function isValidProfileSkills(s) {
+      return s is map
+        && s.keys().hasAll([
+          'existingSkills', 'technicalSkills', 'communicationSkills', 'leadershipActivities',
+          'problemSolving', 'extracurriculars', 'volunteering', 'otherAchievements'
+        ])
+        && s.keys().hasOnly([
+          'existingSkills', 'technicalSkills', 'communicationSkills', 'leadershipActivities',
+          'problemSolving', 'extracurriculars', 'volunteering', 'otherAchievements'
+        ])
+        && isBoundedStringList(s.existingSkills, 25)
+        && isBoundedStringList(s.technicalSkills, 25)
+        && isBoundedString(s.communicationSkills, 0, 500)
+        && isBoundedStringList(s.leadershipActivities, 20)
+        && isBoundedString(s.problemSolving, 0, 500)
+        && isBoundedStringList(s.extracurriculars, 20)
+        && isBoundedStringList(s.volunteering, 20)
+        && isBoundedStringList(s.otherAchievements, 20);
+    }
+
+    function isValidProfileBackground(bg) {
+      return bg is map
+        && bg.keys().hasAll([
+          'familyBackground', 'parentsProfessions', 'familyEducation',
+          'availableResources', 'financialCircumstances'
+        ])
+        && bg.keys().hasOnly([
+          'familyBackground', 'parentsProfessions', 'familyEducation',
+          'availableResources', 'financialCircumstances'
+        ])
+        && isBoundedString(bg.familyBackground, 0, 1200)
+        && isBoundedString(bg.parentsProfessions, 0, 600)
+        && isBoundedString(bg.familyEducation, 0, 600)
+        && isBoundedString(bg.availableResources, 0, 1200)
+        && isBoundedString(bg.financialCircumstances, 0, 800);
+    }
+
+    function isValidPersonalProfile(data, userId, profileId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'relationship', 'parentalConsentConfirmed',
+          'basic', 'education', 'interests', 'skills', 'background',
+          'completenessScore', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'relationship', 'parentalConsentConfirmed',
+          'basic', 'education', 'interests', 'skills', 'background',
+          'completenessScore', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == profileId
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.relationship in ['self', 'child', 'dependent']
+        && data.parentalConsentConfirmed is bool
+        && isValidProfileBasic(data.basic)
+        && isValidProfileEducation(data.education)
+        && isValidProfileInterests(data.interests)
+        && isValidProfileSkills(data.skills)
+        && isValidProfileBackground(data.background)
+        && data.completenessScore is number
+        && data.completenessScore >= 0
+        && data.completenessScore <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCareerAssessment(data, userId, profileId, assessmentId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'profileId', 'title', 'modelVersion', 'providerUsed',
+          'profileSnapshot', 'dataSufficiency', 'summaryAnalysis',
+          'strengths', 'weaknesses', 'academicAnalysis', 'interestAnalysis',
+          'skillAssessment', 'primaryRecommendation', 'alternativeRecommendations',
+          'roadmapMilestones', 'epistemicMarkers', 'comparedWithAssessmentId',
+          'historicalComparison', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'profileId', 'title', 'modelVersion', 'providerUsed',
+          'profileSnapshot', 'dataSufficiency', 'summaryAnalysis',
+          'strengths', 'weaknesses', 'academicAnalysis', 'interestAnalysis',
+          'skillAssessment', 'primaryRecommendation', 'alternativeRecommendations',
+          'roadmapMilestones', 'epistemicMarkers', 'comparedWithAssessmentId',
+          'historicalComparison', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && data.id == assessmentId
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidId(data.profileId)
+        && data.profileId == profileId
+        && isBoundedString(data.title, 1, 200)
+        && isBoundedString(data.modelVersion, 1, 120)
+        && isBoundedString(data.providerUsed, 1, 64)
+        && data.profileSnapshot is map
+        && data.dataSufficiency is map
+        && isBoundedString(data.summaryAnalysis, 1, 8000)
+        && data.strengths is list && data.strengths.size() <= 15
+        && data.weaknesses is list && data.weaknesses.size() <= 15
+        && data.academicAnalysis is map
+        && data.interestAnalysis is map
+        && data.skillAssessment is map
+        && data.primaryRecommendation is map
+        && data.alternativeRecommendations is list && data.alternativeRecommendations.size() <= 6
+        && data.roadmapMilestones is list && data.roadmapMilestones.size() <= 20
+        && data.epistemicMarkers is map
+        && isBoundedString(data.comparedWithAssessmentId, 0, 128)
+        && (data.historicalComparison == null || data.historicalComparison is map)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidFuturePrediction(data, userId, predictionId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'profileId', 'category', 'subjectTitle',
+          'targetLocation', 'inputContext', 'modelVersion', 'providerUsed',
+          'executiveSummary', 'keyDimensions', 'opportunities',
+          'risksAndChallenges', 'timelineScenarios', 'verifiedFacts',
+          'assumptions', 'aiForecasts', 'dataLimitations', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'profileId', 'category', 'subjectTitle',
+          'targetLocation', 'inputContext', 'modelVersion', 'providerUsed',
+          'executiveSummary', 'keyDimensions', 'opportunities',
+          'risksAndChallenges', 'timelineScenarios', 'verifiedFacts',
+          'assumptions', 'aiForecasts', 'dataLimitations', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && data.id == predictionId
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isBoundedString(data.profileId, 0, 128)
+        && data.category in ['personal_development', 'city_hometown', 'country_analysis', 'business_intelligence']
+        && isBoundedString(data.subjectTitle, 1, 200)
+        && data.targetLocation is map
+        && isBoundedString(data.inputContext, 0, 4000)
+        && isBoundedString(data.modelVersion, 1, 120)
+        && isBoundedString(data.providerUsed, 1, 64)
+        && isBoundedString(data.executiveSummary, 1, 8000)
+        && data.keyDimensions is list && data.keyDimensions.size() <= 15
+        && data.opportunities is list && data.opportunities.size() <= 15
+        && data.risksAndChallenges is list && data.risksAndChallenges.size() <= 15
+        && data.timelineScenarios is list && data.timelineScenarios.size() <= 12
+        && isBoundedStringList(data.verifiedFacts, 20)
+        && isBoundedStringList(data.assumptions, 20)
+        && isBoundedStringList(data.aiForecasts, 20)
+        && isBoundedString(data.dataLimitations, 0, 2000)
+        && data.createdAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserAccount(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserAccount(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'parentalConsentAccepted', 'preferredModel', 'updatedAt'
+        ]);
+      allow delete: if isVerifiedUser() && isValidId(userId) && isOwner(userId);
+
+      match /profiles/{profileId} {
+        allow get: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(profileId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow list: if isSignedIn()
+          && isOwner(userId)
+          && resource.data.ownerId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(profileId)
+          && isOwner(userId)
+          && isValidPersonalProfile(incoming(), userId, profileId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(profileId)
+          && isOwner(userId)
+          && isValidPersonalProfile(incoming(), userId, profileId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'relationship', 'parentalConsentConfirmed', 'basic', 'education',
+            'interests', 'skills', 'background', 'completenessScore', 'updatedAt'
+          ])
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow delete: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(profileId)
+          && isOwner(userId);
+
+        match /assessments/{assessmentId} {
+          allow get: if isSignedIn()
+            && isValidId(userId)
+            && isValidId(profileId)
+            && isValidId(assessmentId)
+            && isOwner(userId)
+            && exists(/databases/$(database)/documents/users/$(userId)/profiles/$(profileId));
+          allow list: if isSignedIn()
+            && isOwner(userId)
+            && resource.data.ownerId == request.auth.uid;
+          allow create: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(profileId)
+            && isValidId(assessmentId)
+            && isOwner(userId)
+            && isValidCareerAssessment(incoming(), userId, profileId, assessmentId)
+            && incoming().createdAt == request.time
+            && exists(/databases/$(database)/documents/users/$(userId)/profiles/$(profileId));
+          allow update: if false;
+          allow delete: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(profileId)
+            && isValidId(assessmentId)
+            && isOwner(userId);
+        }
+      }
+
+      match /predictions/{predictionId} {
+        allow get: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(predictionId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow list: if isSignedIn()
+          && isOwner(userId)
+          && resource.data.ownerId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(predictionId)
+          && isOwner(userId)
+          && isValidFuturePrediction(incoming(), userId, predictionId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if false;
+        allow delete: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(predictionId)
+          && isOwner(userId);
+      }
+    }
+  }
+}

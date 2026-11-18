@@ -1,0 +1,333 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "User Account",
+      "description": "Authenticated parent or individual account metadata and parental consent preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "parentalConsentAccepted": {
+          "type": "boolean"
+        },
+        "preferredModel": {
+          "type": "string",
+          "enum": ["Qwen/Qwen3-8B", "Qwen/Qwen3.8-2.4T-A95B", "gemini-4-hydrogen"],
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "parentalConsentAccepted", "preferredModel", "createdAt", "updatedAt"]
+    },
+    "PersonalProfile": {
+      "title": "Personal Profile",
+      "description": "Flexible personal profile for an individual or child managed by an account owner.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "relationship": {
+          "type": "string",
+          "enum": ["self", "child", "dependent"],
+          "maxLength": 32
+        },
+        "parentalConsentConfirmed": {
+          "type": "boolean"
+        },
+        "basic": {
+          "type": "object",
+          "description": "Basic identity, geographic location, and languages."
+        },
+        "education": {
+          "type": "object",
+          "description": "Educational level, grades, strong/weak subjects, achievements."
+        },
+        "interests": {
+          "type": "object",
+          "description": "Hobbies, technical/creative/social interests, goals."
+        },
+        "skills": {
+          "type": "object",
+          "description": "Technical, communication, leadership, and problem-solving skills."
+        },
+        "background": {
+          "type": "object",
+          "description": "Optional family background and available educational resources."
+        },
+        "completenessScore": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "relationship",
+        "parentalConsentConfirmed",
+        "basic",
+        "education",
+        "interests",
+        "skills",
+        "background",
+        "completenessScore",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CareerAssessment": {
+      "title": "Career Assessment",
+      "description": "AI-generated career intelligence report preserving the profile snapshot, model version, and longitudinal comparison.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "profileId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "modelVersion": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "providerUsed": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "profileSnapshot": {
+          "type": "object"
+        },
+        "dataSufficiency": {
+          "type": "object"
+        },
+        "summaryAnalysis": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "strengths": {
+          "type": "array"
+        },
+        "weaknesses": {
+          "type": "array"
+        },
+        "academicAnalysis": {
+          "type": "object"
+        },
+        "interestAnalysis": {
+          "type": "object"
+        },
+        "skillAssessment": {
+          "type": "object"
+        },
+        "primaryRecommendation": {
+          "type": "object"
+        },
+        "alternativeRecommendations": {
+          "type": "array"
+        },
+        "roadmapMilestones": {
+          "type": "array"
+        },
+        "epistemicMarkers": {
+          "type": "object"
+        },
+        "comparedWithAssessmentId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "historicalComparison": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "profileId",
+        "title",
+        "modelVersion",
+        "providerUsed",
+        "profileSnapshot",
+        "dataSufficiency",
+        "summaryAnalysis",
+        "strengths",
+        "weaknesses",
+        "academicAnalysis",
+        "interestAnalysis",
+        "skillAssessment",
+        "primaryRecommendation",
+        "alternativeRecommendations",
+        "roadmapMilestones",
+        "epistemicMarkers",
+        "comparedWithAssessmentId",
+        "createdAt"
+      ]
+    },
+    "FuturePrediction": {
+      "title": "Future Prediction",
+      "description": "Extensible future prediction report across Personal Development, City/Hometown, Country, and Business Intelligence.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "profileId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "category": {
+          "type": "string",
+          "enum": ["personal_development", "city_hometown", "country_analysis", "business_intelligence"],
+          "maxLength": 64
+        },
+        "subjectTitle": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "targetLocation": {
+          "type": "object"
+        },
+        "inputContext": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "modelVersion": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "providerUsed": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "executiveSummary": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "keyDimensions": {
+          "type": "array"
+        },
+        "opportunities": {
+          "type": "array"
+        },
+        "risksAndChallenges": {
+          "type": "array"
+        },
+        "timelineScenarios": {
+          "type": "array"
+        },
+        "verifiedFacts": {
+          "type": "array"
+        },
+        "assumptions": {
+          "type": "array"
+        },
+        "aiForecasts": {
+          "type": "array"
+        },
+        "dataLimitations": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "profileId",
+        "category",
+        "subjectTitle",
+        "targetLocation",
+        "inputContext",
+        "modelVersion",
+        "providerUsed",
+        "executiveSummary",
+        "keyDimensions",
+        "opportunities",
+        "risksAndChallenges",
+        "timelineScenarios",
+        "verifiedFacts",
+        "assumptions",
+        "aiForecasts",
+        "dataLimitations",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Account-level settings and parental consent record isolated to the authenticated user."
+    },
+    "/users/{userId}/profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/PersonalProfile" },
+      "description": "Personal and child profiles owned by the authenticated user."
+    },
+    "/users/{userId}/profiles/{profileId}/assessments/{assessmentId}": {
+      "schema": { "$ref": "#/entities/CareerAssessment" },
+      "description": "Immutable historical career assessments with embedded profile snapshot and model metadata."
+    },
+    "/users/{userId}/predictions/{predictionId}": {
+      "schema": { "$ref": "#/entities/FuturePrediction" },
+      "description": "Multi-category future intelligence reports owned by the authenticated user."
+    }
+  }
+}
