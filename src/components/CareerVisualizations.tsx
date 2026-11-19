@@ -3,7 +3,9 @@ import {
   AlertTriangle,
   BookOpen,
   Briefcase,
+  Check,
   CheckCircle2,
+  Copy,
   Download,
   Globe2,
   Lightbulb,
@@ -47,8 +49,35 @@ export function CareerVisualizations({
   const [selectedRank, setSelectedRank] = useState<number>(1);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [copiedBrief, setCopiedBrief] = useState(false);
 
   const activeCareer = allCareers.find((c) => c.rank === selectedRank)?.data || assessment.primaryRecommendation;
+
+  const handleCopyBrief = async () => {
+    const lines = [
+      `${assessment.title} — ${assessment.profileSnapshot.basic.name}`,
+      `Model: ${assessment.modelVersion} | Data Sufficiency: ${assessment.dataSufficiency.status}`,
+      '',
+      `Primary Recommendation (#1): ${assessment.primaryRecommendation.title} (${assessment.primaryRecommendation.suitabilityScore}/100 alignment score)`,
+      `Reasoning: ${assessment.primaryRecommendation.reasoning}`,
+      `Estimated Salary Band: ${assessment.primaryRecommendation.estimatedSalaryRange}`,
+      '',
+      'Alternative Directions:',
+      ...assessment.alternativeRecommendations.map(
+        (alt, idx) => `- #${idx + 2} ${alt.title} (${alt.suitabilityScore}/100): ${alt.reasoning}`
+      ),
+      '',
+      'Immediate Next Steps:',
+      ...assessment.primaryRecommendation.shortTermPlan.map((step) => `- ${step}`),
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      setCopiedBrief(true);
+      window.setTimeout(() => setCopiedBrief(false), 2000);
+    } catch {
+      // Clipboard unavailable in restricted context
+    }
+  };
 
   const suitabilityChartData = allCareers.map((c) => ({
     name: c.data.title.length > 22 ? `${c.data.title.slice(0, 20)}...` : c.data.title,
@@ -119,6 +148,24 @@ export function CareerVisualizations({
             >
               <Download className="w-4 h-4" />
               Export PDF Report
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyBrief}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0"
+            >
+              {copiedBrief ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span>Copied Brief</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Brief</span>
+                </>
+              )}
             </button>
 
             {onOpenTimeline && (
@@ -355,6 +402,70 @@ export function CareerVisualizations({
               </ul>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Side-by-Side Career Comparison Matrix */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Career Comparison Matrix</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Select any row to inspect its detailed pathway and regional outlook above.
+            </p>
+          </div>
+          <span className="text-xs font-mono tabular-nums text-slate-400">
+            {allCareers.length} directions compared
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500">
+                <th className="py-2.5 px-4">Rank &amp; Career</th>
+                <th className="py-2.5 px-4 text-right">Alignment</th>
+                <th className="py-2.5 px-4">Estimated Salary Band</th>
+                <th className="py-2.5 px-4">Core Skills</th>
+                <th className="py-2.5 px-4">Primary Pathway</th>
+                <th className="py-2.5 px-4">Key Challenge</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs">
+              {allCareers.map((c) => {
+                const isSelected = c.rank === selectedRank;
+                return (
+                  <tr
+                    key={c.rank}
+                    onClick={() => setSelectedRank(c.rank)}
+                    className={`cursor-pointer transition-colors ${
+                      isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <td className="py-3 px-4 font-medium text-slate-900 whitespace-nowrap">
+                      <span className="font-mono text-slate-400 mr-2">#{c.rank}</span>
+                      <span>{c.data.title}</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono tabular-nums font-semibold text-slate-900 whitespace-nowrap">
+                      {c.data.suitabilityScore}/100
+                    </td>
+                    <td className="py-3 px-4 font-mono text-slate-700 whitespace-nowrap">
+                      {c.data.estimatedSalaryRange}
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 max-w-[220px] truncate">
+                      {c.data.requiredSkills.slice(0, 3).join(', ') || '—'}
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 max-w-[220px] truncate">
+                      {c.data.educationalPathways[0] || c.data.degreesCertifications[0] || '—'}
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 max-w-[220px] truncate">
+                      {c.data.challenges[0] || '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
